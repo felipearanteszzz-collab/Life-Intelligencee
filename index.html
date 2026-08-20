@@ -574,7 +574,34 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 
-  /* ── AUTH SCREEN ── */
+  /* ── ONBOARDING SALÁRIO ── */
+  #onboardingScreen {
+    position: fixed; inset: 0; background: #000;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9998; padding: 20px;
+  }
+  #onboardingScreen.hidden { display: none; }
+  .onboard-box {
+    background: #0a0a0a; border: 1px solid #1f1f1f;
+    border-radius: 16px; padding: 36px 32px;
+    width: 100%; max-width: 400px; text-align: center;
+  }
+  .onboard-emoji { font-size: 2.5rem; margin-bottom: 14px; }
+  .onboard-title { font-size: 1.2rem; font-weight: 800; letter-spacing: .5px; margin-bottom: 8px; }
+  .onboard-sub { font-size: .82rem; color: var(--muted); line-height: 1.6; margin-bottom: 28px; }
+  .onboard-input-wrap { position: relative; margin-bottom: 8px; }
+  .onboard-prefix {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    font-size: .9rem; color: var(--muted); font-family: var(--mono); pointer-events: none;
+  }
+  .onboard-input {
+    width: 100%; background: #111; border: 1px solid #333;
+    border-radius: 10px; color: #fff; font-family: var(--mono);
+    font-size: 1.4rem; font-weight: 600; padding: 14px 14px 14px 42px;
+    outline: none; transition: border-color .18s;
+  }
+  .onboard-input:focus { border-color: #fff; }
+  .onboard-hint { font-size: .72rem; color: var(--muted); margin-bottom: 20px; }
   #authScreen {
     position: fixed; inset: 0; background: #000;
     display: flex; align-items: center; justify-content: center;
@@ -663,6 +690,21 @@
 </style>
 </head>
 <body>
+
+<!-- ══ ONBOARDING — SALÁRIO ══ -->
+<div id="onboardingScreen" class="hidden">
+  <div class="onboard-box">
+    <div class="onboard-emoji">💰</div>
+    <div class="onboard-title">Qual é sua renda mensal?</div>
+    <div class="onboard-sub">Para calcular distribuição do seu dinheiro, metas e alertas financeiros com precisão.</div>
+    <div class="onboard-input-wrap">
+      <span class="onboard-prefix">R$</span>
+      <input class="onboard-input" type="number" id="onboardSalario" placeholder="0,00" min="0" step="100">
+    </div>
+    <div class="onboard-hint">Pode atualizar quando quiser em ⚙️ Configurações</div>
+    <button class="auth-btn" onclick="salvarOnboarding()">Começar →</button>
+  </div>
+</div>
 
 <!-- ══ AUTH SCREEN ══ -->
 <div id="authScreen">
@@ -967,7 +1009,32 @@
     <h2>⚙️ Configurações & Backup</h2>
   </div>
 
-  <!-- Status -->
+  <!-- RENDA MENSAL -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Renda Mensal</div>
+    <div id="configSalarioView">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:var(--mono);font-size:1.8rem;font-weight:600;color:var(--green)" id="configSalarioValor">R$0,00</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:2px">salário mensal atual</div>
+        </div>
+        <button class="btn-ghost" onclick="editarSalario()">✏️ Editar</button>
+      </div>
+    </div>
+    <div id="configSalarioEdit" style="display:none">
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">Informe sua renda mensal líquida (o que cai na conta):</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:180px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.85rem;color:var(--muted);font-family:var(--mono)">R$</span>
+          <input type="number" id="configSalarioInput" min="0" step="100" placeholder="0,00"
+            style="padding-left:36px"
+            onkeydown="if(event.key==='Enter')salvarSalarioConfig()">
+        </div>
+        <button class="btn" onclick="salvarSalarioConfig()">Salvar</button>
+        <button class="btn-ghost" onclick="cancelarEditarSalario()">Cancelar</button>
+      </div>
+    </div>
+  </div>
   <div class="card" style="margin-bottom:16px">
     <div class="card-title">Status dos Dados</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -1489,6 +1556,7 @@ onAuthStateChanged(auth, async (user) => {
     updateDate();
     updateBackupBadge();
     checkBackupReminder();
+    checkSalarioOnboarding(); // ← mostra onboarding se salário não definido
     setInterval(save, 30000);
 
     // Inicia sync em tempo real com Firestore do usuário específico
@@ -1520,7 +1588,7 @@ console.log('Firebase Auth + Firestore conectados ✅');
 
 // STATE
 const DEFAULT_STATE = {
-  salario:1600, academia:109, lancamentos:[], bancos:[], _editBancoId:null,
+  salario:0, academia:109, lancamentos:[], bancos:[], _editBancoId:null,
   dividas:[], exercicios:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]}, exercFeitos:{},
   reunioes:[], lembretes:[], rotina:{manha:[],tarde:[],noite:[]}, rotinaFeito:{}, treinoDia:0,
   diario:[], notas:[], _notaCatFiltro:'todas',
@@ -1831,6 +1899,55 @@ window.confirmarAtualizarSaldo = function() {
   if(diff>0) showToast({icon:'💰',label:'Saldo atualizado',title:b.nome,sub:b.tipo,amount:diff});
 };
 window.deleteBanco = function(id){S.bancos=S.bancos.filter(x=>x.id!==id);save();renderBancos();};
+// ══ SALÁRIO — ONBOARDING E CONFIG ══
+
+// Mostra onboarding se usuário não tem salário definido ainda
+function checkSalarioOnboarding() {
+  if (!S.salario || S.salario === 0) {
+    document.getElementById('onboardingScreen').classList.remove('hidden');
+  }
+}
+
+window.salvarOnboarding = function() {
+  const val = parseFloat(document.getElementById('onboardSalario').value);
+  if (!val || val <= 0) {
+    document.getElementById('onboardSalario').style.borderColor = 'var(--red)';
+    return;
+  }
+  S.salario = val;
+  save();
+  document.getElementById('onboardingScreen').classList.add('hidden');
+  renderAll();
+  showToast({icon:'💰', label:'Renda configurada', title:`R$ ${val.toFixed(2).replace('.',',')} por mês`, sub:'Pode editar em Configurações'});
+};
+
+window.editarSalario = function() {
+  document.getElementById('configSalarioView').style.display = 'none';
+  document.getElementById('configSalarioEdit').style.display = 'block';
+  document.getElementById('configSalarioInput').value = S.salario || '';
+  document.getElementById('configSalarioInput').focus();
+};
+
+window.cancelarEditarSalario = function() {
+  document.getElementById('configSalarioEdit').style.display = 'none';
+  document.getElementById('configSalarioView').style.display = 'block';
+};
+
+window.salvarSalarioConfig = function() {
+  const val = parseFloat(document.getElementById('configSalarioInput').value);
+  if (!val || val <= 0) return alert('Informe um valor válido.');
+  S.salario = val;
+  save();
+  cancelarEditarSalario();
+  renderAll();
+  showToast({icon:'💰', label:'Renda atualizada', title:`${fmt(val)} / mês`});
+};
+
+function renderConfigSalario() {
+  const el = document.getElementById('configSalarioValor');
+  if (el) el.textContent = S.salario ? fmt(S.salario) : 'Não definido';
+}
+
 window.resetarTudo = function() {
   if(!confirm('Tem certeza? Todos os dados serão apagados!')) return;
   Object.assign(S,{...DEFAULT_STATE,exercicios:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]},rotina:{manha:[],tarde:[],noite:[]}});
@@ -1950,11 +2067,30 @@ function renderNotas(){
     </div>`).join('');
 }
 
-function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();}
+function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();renderConfigSalario();}
 window.renderAll=renderAll; window.renderTreino=renderTreino;
 
 function renderDashboard() {
   const {salario,academia,lancamentos,dividas}=S;
+
+  // Se salário não configurado, mostra banner de alerta no dashboard
+  const alertEl=document.getElementById('alertBanner');
+  if (!salario || salario === 0) {
+    alertEl.innerHTML=`<div class="alert" style="cursor:pointer" onclick="showPage2('config')">⚠️ Defina sua renda mensal em <strong>Configurações</strong> para ver os cálculos financeiros. Clique aqui →</div>`;
+    document.getElementById('statCards').innerHTML=`
+      <div class="stat"><div class="stat-label">Salário Bruto</div><div class="stat-value" style="color:var(--muted)">—</div><div class="stat-sub">não definido</div></div>
+      <div class="stat"><div class="stat-label">Disponível</div><div class="stat-value" style="color:var(--muted)">—</div></div>
+      <div class="stat"><div class="stat-label">Dívidas/mês</div><div class="stat-value">${fmt(dividas.filter(d=>!d.quitada).reduce((a,b)=>a+(b.parcela||0),0))}</div></div>
+      <div class="stat"><div class="stat-label">Uso Fruto</div><div class="stat-value" style="color:var(--muted)">—</div></div>`;
+    document.getElementById('ringLegend').innerHTML='<div style="font-size:.78rem;color:var(--muted)">Configure sua renda para ver a distribuição.</div>';
+    document.getElementById('metasProgress').innerHTML='<div style="font-size:.82rem;color:var(--muted)">Configure sua renda mensal para ver as metas.</div>';
+    const proximas=S.reunioes.slice(0,3);
+    document.getElementById('dashMeetings').innerHTML=proximas.length?proximas.map(r=>`<div class="meeting-card"><div class="meeting-time">${r.data?new Date(r.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}):''} ${r.hora}</div><div class="meeting-title">${r.titulo}</div>${r.local?`<div class="meeting-local">📍 ${r.local}</div>`:''}</div>`).join(''):'<div class="empty"><div class="icon">📅</div>Nenhuma reunião</div>';
+    const urgentes=S.lembretes.filter(l=>!l.feito&&l.prio==='alta').slice(0,4);
+    document.getElementById('dashReminders').innerHTML=urgentes.length?urgentes.map(l=>`<div class="reminder-card"><div class="reminder-dot" style="--c:#ff6b6b"></div><div style="flex:1;font-size:.85rem">${l.text}</div>${l.data?`<div class="tag red">${new Date(l.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</div>`:''}</div>`).join(''):'<div class="empty"><div class="icon">✅</div>Nenhum urgente</div>';
+    return;
+  }
+
   const saidas=lancamentos.filter(l=>l.tipo==='saida').reduce((a,b)=>a+b.valor,0);
   const entradas=lancamentos.filter(l=>l.tipo==='entrada').reduce((a,b)=>a+b.valor,0);
   const totalDividas=dividas.filter(d=>!d.quitada).reduce((a,b)=>a+(b.parcela||0),0);
@@ -1965,14 +2101,13 @@ function renderDashboard() {
     <div class="stat" style="--c:#ffd166"><div class="stat-label">Disponível</div><div class="stat-value">${fmt(disponivel)}</div><div class="stat-sub">após academia</div></div>
     <div class="stat" style="--c:#ff6b6b"><div class="stat-label">Dívidas/mês</div><div class="stat-value">${fmt(totalDividas)}</div></div>
     <div class="stat" style="--c:#6c63ff"><div class="stat-label">Uso Fruto</div><div class="stat-value">${fmt(Math.max(0,livre))}</div></div>`;
-  const alertEl=document.getElementById('alertBanner');
   if(totalDividas>disponivel*.5) alertEl.innerHTML=`<div class="alert">⚠️ Suas dívidas comprometem mais de 50% da renda!</div>`;
   else if(totalDividas===0&&dividas.length>0) alertEl.innerHTML=`<div class="alert alert-green">🎉 Todas as dívidas quitadas!</div>`;
   else alertEl.innerHTML='';
   const circ=2*Math.PI*38;
   const segs=[{id:'ringDivida',val:pagDivida,color:'#ff6b6b',label:`Dívidas ${fmt(pagDivida)}`},{id:'ringEmerg',val:emerg,color:'#ffd166',label:`Emergência ${fmt(emerg)}`},{id:'ringReserva',val:reserva,color:'#43d98c',label:`Reserva ${fmt(reserva)}`},{id:'ringLivre',val:Math.max(0,livre),color:'#6c63ff',label:`Uso livre ${fmt(Math.max(0,livre))}`}];
   let offset=0;
-  segs.forEach(seg=>{const dash=(seg.val/salario)*circ,el=document.getElementById(seg.id);if(el){el.setAttribute('stroke-dasharray',`${dash} ${circ}`);el.setAttribute('stroke-dashoffset',-offset);}offset+=dash;});
+  segs.forEach(seg=>{const dash=salario>0?(seg.val/salario)*circ:0,el=document.getElementById(seg.id);if(el){el.setAttribute('stroke-dasharray',`${dash} ${circ}`);el.setAttribute('stroke-dashoffset',-offset);}offset+=dash;});
   document.getElementById('ringLegend').innerHTML=segs.map(s=>`<div class="legend-row"><div class="legend-dot" style="background:${s.color}"></div><span style="font-size:.78rem;color:var(--muted)">${s.label}</span></div>`).join('');
   document.getElementById('metasProgress').innerHTML=`<div class="progress-wrap"><div class="progress-label"><span>🛟 Emergência</span><span style="color:var(--yellow)">${fmt(0)} / ${fmt(2000)}</span></div><div class="progress-bar"><div class="progress-fill" style="--c:#ffd166;width:0%"></div></div></div><div class="progress-wrap"><div class="progress-label"><span>🏦 Reserva</span><span style="color:var(--green)">${fmt(0)} / ${fmt(5000)}</span></div><div class="progress-bar"><div class="progress-fill" style="--c:#43d98c;width:0%"></div></div></div><div style="margin-top:14px;font-size:.78rem;color:var(--muted);line-height:1.6">💡 <strong style="color:var(--text)">Sugestão:</strong> Reserve ${fmt(emerg)}/mês emergência e ${fmt(reserva)}/mês reserva.</div>`;
   const proximas=S.reunioes.slice(0,3);
@@ -1985,8 +2120,9 @@ function renderFinancas() {
   const {lancamentos}=S;
   const entradas=lancamentos.filter(l=>l.tipo==='entrada').reduce((a,b)=>a+b.valor,0);
   const saidas=lancamentos.filter(l=>l.tipo==='saida').reduce((a,b)=>a+b.valor,0);
-  const saldo=S.salario+entradas-saidas;
-  document.getElementById('totalEntradas').textContent=fmt(S.salario+entradas);
+  const salarioBase = S.salario || 0;
+  const saldo=salarioBase+entradas-saidas;
+  document.getElementById('totalEntradas').textContent=fmt(salarioBase+entradas);
   document.getElementById('totalSaidas').textContent=fmt(saidas);
   const sEl=document.getElementById('saldoAtual'); sEl.textContent=fmt(saldo); sEl.style.color=saldo>=0?'var(--green)':'var(--red)';
   document.getElementById('listaLancamentos').innerHTML=!lancamentos.length?'<div class="empty"><div class="icon">📋</div>Nenhum lançamento ainda</div>':[...lancamentos].reverse().map(l=>`<div class="list-item"><div class="list-item-left"><div class="list-item-icon">${l.tipo==='entrada'?'💚':'💸'}</div><div class="list-item-text"><div class="name">${l.desc}</div><div class="sub">${l.cat} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div></div></div><div class="amount ${l.tipo==='saida'?'neg':'pos'}">${l.tipo==='saida'?'-':'+'}${fmt(l.valor)}</div></div>`).join('');
