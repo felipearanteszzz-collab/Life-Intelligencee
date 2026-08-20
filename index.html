@@ -2,7 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life Intelligence">
+<meta name="description" content="Sua ferramenta de alta performance. Finanças, rotina, treino e autoconhecimento em um só lugar.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Life Intelligence</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
@@ -93,6 +101,29 @@
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
   @media(max-width:700px) { .grid-2,.grid-3 { grid-template-columns: 1fr; } }
+
+  /* ── MOBILE / PWA ── */
+  /* iOS safe area (notch + home indicator) */
+  header { padding-top: max(18px, env(safe-area-inset-top)); }
+  main { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+
+  /* Nav scrollável em telas pequenas */
+  @media(max-width:600px) {
+    header { padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top)); }
+    header .date-badge { display: none; } /* Esconde data em mobile pra não sufocar */
+    nav { padding: 8px 12px; gap: 3px; }
+    .tab { font-size: .75rem; padding: 6px 12px; }
+    main { padding: 16px; padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+    .stat-cards { grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .card { padding: 16px; }
+    .auth-box { padding: 28px 20px; }
+    .modal { padding: 20px; }
+  }
+
+  /* Evita zoom em inputs no iOS */
+  @media(max-width:600px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
 
   /* ── CARDS ── */
   .card {
@@ -1908,8 +1939,8 @@ function renderNotas(){
   if(!notas.length){el.innerHTML=`<div class="empty"><div class="icon">⚡</div>${busca||cat!=='todas'?'Nenhuma nota encontrada.':'Nenhuma nota ainda. Capture suas ideias!'}</div>`;return;}
   el.innerHTML=notas.map(n=>`
     <div class="nota-card">
-      <div class="nota-card-top"><div class="nota-card-titulo">${n.pinned?'📌 ':''}${n.titulo}</div><div class="nota-card-data">${new Date(n.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</div></div>
-      <div class="nota-card-content">${n.conteudo}</div>
+      <div class="nota-card-top"><div class="nota-card-titulo">${n.pinned?'📌 ':''}${esc(n.titulo)}</div><div class="nota-card-data">${new Date(n.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})}</div></div>
+      <div class="nota-card-content">${esc(n.conteudo)}</div>
       <div class="nota-card-footer">
         <span class="tag">${CAT_LABEL[n.categoria]||n.categoria}</span>
         <div style="flex:1"></div>
@@ -2016,6 +2047,34 @@ function renderBancos() {
   const ultimas=[...S.lancamentos].reverse().slice(0,6);
   document.getElementById('bancosMovimentacoes').innerHTML=!ultimas.length?'<div class="empty"><div class="icon">📋</div>Nenhum lançamento</div>':ultimas.map(l=>`<div class="list-item"><div class="list-item-left"><div class="list-item-icon">${l.tipo==='entrada'?'💚':'💸'}</div><div class="list-item-text"><div class="name">${l.desc}</div><div class="sub">${l.cat} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div></div></div><div class="amount ${l.tipo==='saida'?'neg':'pos'}">${l.tipo==='saida'?'-':'+'}${fmt(l.valor)}</div></div>`).join('');
 }
+
+// ══ SEGURANÇA — SANITIZAÇÃO XSS ══
+// Escapa HTML antes de renderizar input do usuário no DOM
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+
+// ══ PWA — SERVICE WORKER ══
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // sw.js não encontrado ainda — sem erro crítico
+    });
+  });
+}
+
+// ══ CAPACITOR BRIDGE (futuro) ══
+// Quando migrar para Capacitor, importar aqui:
+// import { App } from '@capacitor/app';
+// import { StatusBar } from '@capacitor/status-bar';
+// Por enquanto, detecta ambiente nativo vs web
+window._isNative = !!(window.Capacitor && window.Capacitor.isNative);
 
 // App inicializado pelo onAuthStateChanged acima
 </script>
