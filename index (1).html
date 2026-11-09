@@ -10,6 +10,8 @@
 <meta name="apple-mobile-web-app-title" content="Life Intelligence">
 <meta name="description" content="Sua ferramenta de alta performance. Finanças, rotina, treino e autoconhecimento em um só lugar.">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Life Intelligence</title>
 <style>
@@ -687,6 +689,40 @@
   .ring-legend { flex: 1; }
   .legend-row { display: flex; align-items: center; gap: 8px; font-size: .8rem; margin-bottom: 6px; }
   .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ══ IDENTIDADE v2 — CARVÃO & OURO ══ */
+  :root{--bg:#050505;--surface:#0d0d0d;--surface2:#141413;--border:rgba(242,237,227,.10);--accent:#d9b45a;--text:#f2ede3;--muted:#8c887f;--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--display:'Instrument Serif',Georgia,serif}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  header{background:var(--bg);border-bottom:1px solid var(--border)}
+  .logo{display:flex;align-items:center;font-family:var(--display);font-size:1.5rem;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text)}
+  .logo::before{content:"";width:9px;height:9px;margin-right:11px;background:var(--accent);border-radius:2px;transform:rotate(45deg)}
+  .logo span{opacity:1;color:var(--text);margin-left:.28em;font-style:italic}
+  .auth-logo{font-family:var(--display);font-size:2.1rem;font-weight:400;letter-spacing:0;text-transform:none}
+  .auth-logo span{opacity:1;font-style:italic}
+  .date-badge{background:transparent}
+  .tab{border-radius:999px;font-weight:600}
+  .tab:hover{color:var(--text);background:rgba(242,237,227,.06);border-color:var(--border);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .tab.active{background:transparent;color:var(--accent);border-color:var(--accent);backdrop-filter:none;-webkit-backdrop-filter:none}
+  .card,.stat,.divida-card,.banco-card,.nota-card,.diario-card,.reminder-card{background:var(--surface);border:1px solid var(--border)}
+  .card{border-radius:16px}.stat{border-radius:10px}
+  .meeting-card{background:var(--surface);border-left:2px solid var(--accent)}
+  .card-title,.stat-label{text-transform:none;letter-spacing:.2px;font-size:.8rem;font-weight:600;color:var(--muted)}
+  .stat-value{letter-spacing:-.5px}
+  .section-hdr h2{font-family:var(--display);font-size:1.8rem;font-weight:400}
+  .modal-title,.onboard-title{font-family:var(--display);font-size:1.6rem;font-weight:400;letter-spacing:0}
+  .hero{margin:6px 0 26px}
+  .hero-title{font-family:var(--display);font-weight:400;font-size:clamp(2.2rem,6vw,3.4rem);line-height:1.05;letter-spacing:-.5px}
+  .btn,.auth-btn,.auth-tab.active,.day-tab.active,.cat-btn.active,.user-avatar{background:var(--accent);color:#0a0806;border-color:var(--accent)}
+  .btn,.auth-btn{border-radius:8px}
+  .btn:hover,.auth-btn:hover{opacity:1;filter:brightness(1.1)}
+  .btn.btn-ghost{background:none;color:var(--muted);border:1px solid var(--border)}
+  .btn-danger{background:var(--red);color:#fff;border:none}
+  .btn-green{background:var(--green);color:#04130a}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+  input,select,textarea,.auth-field input,.onboard-input,.notas-search{background:rgba(242,237,227,.04);border:1px solid var(--border);border-radius:10px}
+  .mood-btn.selected{border-color:var(--accent);background:rgba(217,180,90,.10)}
+  .auth-box,.onboard-box,.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px}
+  .modal-overlay{background:rgba(0,0,0,.8)}
 </style>
 </head>
 <body>
@@ -768,6 +804,7 @@
 <nav>
   <button class="tab active" onclick="showPage('dashboard')">🏠 Início</button>
   <button class="tab" onclick="showPage('financas')">💰 Finanças</button>
+  <button class="tab" onclick="showPage('despesas')">🧾 Despesas</button>
   <button class="tab" onclick="showPage('dividas')">📉 Dívidas</button>
   <button class="tab" onclick="showPage('treino')">💪 Treino</button>
   <button class="tab" onclick="showPage('reunioes')">📅 Reuniões</button>
@@ -786,6 +823,7 @@
 
 <!-- ══════════ DASHBOARD ══════════ -->
 <div class="page active" id="page-dashboard">
+  <div class="hero"><h1 class="hero-title" id="heroTitle"></h1></div>
   <div id="alertBanner"></div>
 
   <div class="stat-cards" id="statCards"></div>
@@ -866,6 +904,20 @@
   </div>
 </div>
 
+<!-- ══════════ DESPESAS ══════════ -->
+<div class="page" id="page-despesas">
+  <div class="section-hdr">
+    <h2>🧾 Despesas Mensais</h2>
+    <button class="btn" onclick="openModal('modalDespesa')">+ Despesa</button>
+  </div>
+  <div class="stat-cards">
+    <div class="stat" style="--c:#43d98c;cursor:pointer" onclick="openSalarioModal()"><div class="stat-label">Renda mensal</div><div class="stat-value" id="despRenda">R$0</div><div class="stat-sub">toque para editar ✏️</div></div>
+    <div class="stat" style="--c:#ff6b6b"><div class="stat-label">Total de despesas</div><div class="stat-value" id="despTotal">R$0</div><div class="stat-sub" id="despQtd"></div></div>
+    <div class="stat" style="--c:#6c63ff"><div class="stat-label">Sobra no mês</div><div class="stat-value" id="despSobra">R$0</div><div class="stat-sub">renda − academia − despesas</div></div>
+  </div>
+  <div class="card"><div class="card-title">Suas despesas</div><div id="listaDespesas"></div></div>
+</div>
+
 <!-- ══════════ DÍVIDAS ══════════ -->
 <div class="page" id="page-dividas">
   <div class="section-hdr">
@@ -913,8 +965,8 @@
     </div>
     <div class="stat" style="--c:#ffd166">
       <div class="stat-label">Academia</div>
-      <div class="stat-value">R$109</div>
-      <div class="stat-sub">desconto automático</div>
+      <div class="stat-value" id="treinoAcademia" style="cursor:pointer" onclick="openAcademiaModal()">R$109</div>
+      <div class="stat-sub">toque para editar ✏️</div>
     </div>
   </div>
 
@@ -1307,6 +1359,30 @@
   </div>
 </div>
 
+<!-- Modal Academia -->
+<div class="modal-overlay" id="modalAcademia"><div class="modal">
+  <div class="modal-title">Gasto fixo: academia</div>
+  <div class="field"><label>Mensalidade (R$). Use 0 se não tiver.</label><input id="modalAcademiaInput" type="number" min="0" step="1" placeholder="0,00" onkeydown="if(event.key==='Enter')salvarAcademia()"></div>
+  <div class="modal-footer"><button class="btn-ghost" onclick="closeModal('modalAcademia')">Cancelar</button><button class="btn" onclick="salvarAcademia()">Salvar</button></div>
+</div></div>
+
+<!-- Modal Despesa -->
+<div class="modal-overlay" id="modalDespesa"><div class="modal">
+  <div class="modal-title">Nova despesa mensal</div>
+  <div class="field"><label>Nome</label><input id="despNome" placeholder="Ex: Aluguel, internet..."></div>
+  <div class="field"><label>Valor (R$)</label><input id="despValor" type="number" placeholder="0,00"></div>
+  <div class="field"><label>Categoria</label><select id="despCat"><option>Moradia</option><option>Alimentação</option><option>Transporte</option><option>Assinaturas</option><option>Saúde</option><option>Educação</option><option>Outros</option></select></div>
+  <div class="field"><label>Dia do vencimento (opcional)</label><input id="despDia" type="number" min="1" max="31" placeholder="Ex: 10"></div>
+  <div class="modal-footer"><button class="btn-ghost" onclick="closeModal('modalDespesa')">Cancelar</button><button class="btn" onclick="addDespesa()">Salvar</button></div>
+</div></div>
+
+<!-- Modal Salário -->
+<div class="modal-overlay" id="modalSalario"><div class="modal">
+  <div class="modal-title">Editar renda mensal</div>
+  <div class="field"><label>Renda líquida (R$)</label><input id="modalSalarioInput" type="number" min="0" step="100" placeholder="0,00" onkeydown="if(event.key==='Enter')salvarSalarioModal()"></div>
+  <div class="modal-footer"><button class="btn-ghost" onclick="closeModal('modalSalario')">Cancelar</button><button class="btn" onclick="salvarSalarioModal()">Salvar</button></div>
+</div></div>
+
 <!-- Modal Diário -->
 <div class="modal-overlay" id="modalDiario">
   <div class="modal" style="max-width:520px">
@@ -1588,7 +1664,7 @@ console.log('Firebase Auth + Firestore conectados ✅');
 
 // STATE
 const DEFAULT_STATE = {
-  salario:0, academia:109, lancamentos:[], bancos:[], _editBancoId:null,
+  salario:0, academia:109, despesas:[], lancamentos:[], bancos:[], _editBancoId:null,
   dividas:[], exercicios:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]}, exercFeitos:{},
   reunioes:[], lembretes:[], rotina:{manha:[],tarde:[],noite:[]}, rotinaFeito:{}, treinoDia:0,
   diario:[], notas:[], _notaCatFiltro:'todas',
@@ -1899,6 +1975,48 @@ window.confirmarAtualizarSaldo = function() {
   if(diff>0) showToast({icon:'💰',label:'Saldo atualizado',title:b.nome,sub:b.tipo,amount:diff});
 };
 window.deleteBanco = function(id){S.bancos=S.bancos.filter(x=>x.id!==id);save();renderBancos();};
+// ══ ACADEMIA EDITÁVEL ══
+window.openAcademiaModal=function(){document.getElementById('modalAcademiaInput').value=S.academia??0;openModal('modalAcademia');};
+window.salvarAcademia=function(){
+  const v=parseFloat(document.getElementById('modalAcademiaInput').value);
+  if(isNaN(v)||v<0) return alert('Informe um valor válido (0 se não tiver).');
+  S.academia=v; save(); closeModal('modalAcademia'); renderAll();
+  showToast({icon:'💪',label:'Academia atualizada',title:fmt(v)+' / mês'});
+};
+
+// ══ DESPESAS MENSAIS ══
+const mesAtual=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+window.addDespesa=function(){
+  const nome=document.getElementById('despNome').value.trim();
+  const valor=parseFloat(document.getElementById('despValor').value);
+  const cat=document.getElementById('despCat').value;
+  const dia=parseInt(document.getElementById('despDia').value)||0;
+  if(!nome||!valor||valor<=0) return alert('Informe nome e valor!');
+  S.despesas.push({id:Date.now(),nome,valor,cat,dia,pagaMes:''});
+  save(); renderAll(); closeModal('modalDespesa');
+  ['despNome','despValor','despDia'].forEach(id=>document.getElementById(id).value='');
+};
+window.togglePagaDespesa=function(id){const d=S.despesas.find(x=>x.id===id);if(!d)return;d.pagaMes=d.pagaMes===mesAtual()?'':mesAtual();save();renderAll();};
+window.deleteDespesa=function(id){if(!confirm('Remover esta despesa?'))return;S.despesas=S.despesas.filter(x=>x.id!==id);save();renderAll();};
+window.openSalarioModal=function(){document.getElementById('modalSalarioInput').value=S.salario||'';openModal('modalSalario');};
+window.salvarSalarioModal=function(){
+  const v=parseFloat(document.getElementById('modalSalarioInput').value);
+  if(!v||v<=0) return alert('Informe um valor válido.');
+  S.salario=v; save(); closeModal('modalSalario'); renderAll();
+  showToast({icon:'💰',label:'Renda atualizada',title:fmt(v)+' / mês'});
+};
+function renderDespesas(){
+  const ta=document.getElementById('treinoAcademia'); if(ta) ta.textContent=fmt(S.academia||0);
+  const l=document.getElementById('listaDespesas'); if(!l) return;
+  const desp=S.despesas||[], total=desp.reduce((a,b)=>a+b.valor,0), mk=mesAtual();
+  const sobra=(S.salario||0)-(S.academia||0)-total;
+  document.getElementById('despRenda').textContent=S.salario?fmt(S.salario):'Definir';
+  document.getElementById('despTotal').textContent=fmt(total);
+  document.getElementById('despQtd').textContent=desp.length+' cadastrada(s) · '+desp.filter(d=>d.pagaMes===mk).length+' paga(s) no mês';
+  const sb=document.getElementById('despSobra'); sb.textContent=fmt(sobra); sb.style.color=sobra>=0?'var(--green)':'var(--red)';
+  l.innerHTML=!desp.length?'<div class="empty"><div class="icon">🧾</div>Nenhuma despesa cadastrada</div>':[...desp].sort((a,b)=>(a.dia||99)-(b.dia||99)).map(d=>{const paga=d.pagaMes===mk;return `<div class="check-item ${paga?'done':''}"><input type="checkbox" ${paga?'checked':''} onchange="togglePagaDespesa(${d.id})"><label>${esc(d.nome)} <span style="color:var(--muted);font-size:.72rem">· ${esc(d.cat)}${d.dia?' · vence dia '+d.dia:''}</span></label><span class="amount neg">${fmt(d.valor)}</span><button class="del-btn" onclick="deleteDespesa(${d.id})">✕</button></div>`;}).join('');
+}
+
 // ══ SALÁRIO — ONBOARDING E CONFIG ══
 
 // Mostra onboarding se usuário não tem salário definido ainda
@@ -2067,11 +2185,14 @@ function renderNotas(){
     </div>`).join('');
 }
 
-function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();renderConfigSalario();}
+function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();renderConfigSalario();renderDespesas();}
 window.renderAll=renderAll; window.renderTreino=renderTreino;
 
 function renderDashboard() {
   const {salario,academia,lancamentos,dividas}=S;
+  const _h=new Date().getHours(), _g=_h<5?'Boa madrugada':_h<12?'Bom dia':_h<18?'Boa tarde':'Boa noite';
+  const _n=((currentUser&&(currentUser.displayName||currentUser.email))||'').split(/[ @]/)[0];
+  const _he=document.getElementById('heroTitle'); if(_he) _he.textContent=_g+(_n?', '+_n:'')+'.';
 
   // Se salário não configurado, mostra banner de alerta no dashboard
   const alertEl=document.getElementById('alertBanner');
@@ -2094,11 +2215,11 @@ function renderDashboard() {
   const saidas=lancamentos.filter(l=>l.tipo==='saida').reduce((a,b)=>a+b.valor,0);
   const entradas=lancamentos.filter(l=>l.tipo==='entrada').reduce((a,b)=>a+b.valor,0);
   const totalDividas=dividas.filter(d=>!d.quitada).reduce((a,b)=>a+(b.parcela||0),0);
-  const disponivel=salario-academia, emerg=Math.round(disponivel*.10), reserva=Math.round(disponivel*.10);
-  const pagDivida=Math.min(totalDividas,Math.round(disponivel*.30)), livre=disponivel-emerg-reserva-pagDivida;
+  const totalDesp=(S.despesas||[]).reduce((a,b)=>a+b.valor,0); const disponivel=salario-academia-totalDesp, emerg=Math.round(Math.max(0,disponivel)*.10), reserva=Math.round(Math.max(0,disponivel)*.10);
+  const pagDivida=Math.min(totalDividas,Math.round(Math.max(0,disponivel)*.30)), livre=disponivel-emerg-reserva-pagDivida;
   document.getElementById('statCards').innerHTML=`
-    <div class="stat" style="--c:#43d98c"><div class="stat-label">Salário Bruto</div><div class="stat-value">${fmt(salario)}</div><div class="stat-sub">mensal</div></div>
-    <div class="stat" style="--c:#ffd166"><div class="stat-label">Disponível</div><div class="stat-value">${fmt(disponivel)}</div><div class="stat-sub">após academia</div></div>
+    <div class="stat" style="--c:#43d98c;cursor:pointer" onclick="openSalarioModal()"><div class="stat-label">Salário Bruto</div><div class="stat-value">${fmt(salario)}</div><div class="stat-sub">mensal · toque para editar ✏️</div></div>
+    <div class="stat" style="--c:#ffd166"><div class="stat-label">Disponível</div><div class="stat-value">${fmt(disponivel)}</div><div class="stat-sub">após academia e despesas</div></div>
     <div class="stat" style="--c:#ff6b6b"><div class="stat-label">Dívidas/mês</div><div class="stat-value">${fmt(totalDividas)}</div></div>
     <div class="stat" style="--c:#6c63ff"><div class="stat-label">Uso Fruto</div><div class="stat-value">${fmt(Math.max(0,livre))}</div></div>`;
   if(totalDividas>disponivel*.5) alertEl.innerHTML=`<div class="alert">⚠️ Suas dívidas comprometem mais de 50% da renda!</div>`;
@@ -2126,7 +2247,7 @@ function renderFinancas() {
   document.getElementById('totalSaidas').textContent=fmt(saidas);
   const sEl=document.getElementById('saldoAtual'); sEl.textContent=fmt(saldo); sEl.style.color=saldo>=0?'var(--green)':'var(--red)';
   document.getElementById('listaLancamentos').innerHTML=!lancamentos.length?'<div class="empty"><div class="icon">📋</div>Nenhum lançamento ainda</div>':[...lancamentos].reverse().map(l=>`<div class="list-item"><div class="list-item-left"><div class="list-item-icon">${l.tipo==='entrada'?'💚':'💸'}</div><div class="list-item-text"><div class="name">${l.desc}</div><div class="sub">${l.cat} · ${new Date(l.data).toLocaleDateString('pt-BR')}</div></div></div><div class="amount ${l.tipo==='saida'?'neg':'pos'}">${l.tipo==='saida'?'-':'+'}${fmt(l.valor)}</div></div>`).join('');
-  document.getElementById('gastosFixos').innerHTML=`<div class="list-item"><div class="list-item-left"><div class="list-item-icon">💪</div><div class="list-item-text"><div class="name">Academia</div><div class="sub">Desconto fixo</div></div></div><div class="amount neg">-${fmt(S.academia)}</div></div>`;
+  document.getElementById('gastosFixos').innerHTML=`<div class="list-item"><div class="list-item-left"><div class="list-item-icon">💪</div><div class="list-item-text"><div class="name">Academia</div><div class="sub">Desconto fixo</div></div></div><div class="amount neg" style="cursor:pointer" onclick="openAcademiaModal()" title="Editar">-${fmt(S.academia)} ✏️</div></div>`;
 }
 
 function renderDividas() {
