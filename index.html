@@ -768,6 +768,7 @@
 <nav>
   <button class="tab active" onclick="showPage('dashboard')">🏠 Início</button>
   <button class="tab" onclick="showPage('financas')">💰 Finanças</button>
+  <button class="tab" onclick="showPage('despesas')">🧾 Despesas</button>
   <button class="tab" onclick="showPage('dividas')">📉 Dívidas</button>
   <button class="tab" onclick="showPage('treino')">💪 Treino</button>
   <button class="tab" onclick="showPage('reunioes')">📅 Reuniões</button>
@@ -864,6 +865,20 @@
       <div id="gastosFixos"></div>
     </div>
   </div>
+</div>
+
+<!-- ══════════ DESPESAS ══════════ -->
+<div class="page" id="page-despesas">
+  <div class="section-hdr">
+    <h2>🧾 Despesas Mensais</h2>
+    <button class="btn" onclick="openModal('modalDespesa')">+ Despesa</button>
+  </div>
+  <div class="stat-cards">
+    <div class="stat" style="--c:#43d98c;cursor:pointer" onclick="openSalarioModal()"><div class="stat-label">Renda mensal</div><div class="stat-value" id="despRenda">R$0</div><div class="stat-sub">toque para editar ✏️</div></div>
+    <div class="stat" style="--c:#ff6b6b"><div class="stat-label">Total de despesas</div><div class="stat-value" id="despTotal">R$0</div><div class="stat-sub" id="despQtd"></div></div>
+    <div class="stat" style="--c:#6c63ff"><div class="stat-label">Sobra no mês</div><div class="stat-value" id="despSobra">R$0</div><div class="stat-sub">renda − academia − despesas</div></div>
+  </div>
+  <div class="card"><div class="card-title">Suas despesas</div><div id="listaDespesas"></div></div>
 </div>
 
 <!-- ══════════ DÍVIDAS ══════════ -->
@@ -1307,6 +1322,23 @@
   </div>
 </div>
 
+<!-- Modal Despesa -->
+<div class="modal-overlay" id="modalDespesa"><div class="modal">
+  <div class="modal-title">Nova despesa mensal</div>
+  <div class="field"><label>Nome</label><input id="despNome" placeholder="Ex: Aluguel, internet..."></div>
+  <div class="field"><label>Valor (R$)</label><input id="despValor" type="number" placeholder="0,00"></div>
+  <div class="field"><label>Categoria</label><select id="despCat"><option>Moradia</option><option>Alimentação</option><option>Transporte</option><option>Assinaturas</option><option>Saúde</option><option>Educação</option><option>Outros</option></select></div>
+  <div class="field"><label>Dia do vencimento (opcional)</label><input id="despDia" type="number" min="1" max="31" placeholder="Ex: 10"></div>
+  <div class="modal-footer"><button class="btn-ghost" onclick="closeModal('modalDespesa')">Cancelar</button><button class="btn" onclick="addDespesa()">Salvar</button></div>
+</div></div>
+
+<!-- Modal Salário -->
+<div class="modal-overlay" id="modalSalario"><div class="modal">
+  <div class="modal-title">Editar renda mensal</div>
+  <div class="field"><label>Renda líquida (R$)</label><input id="modalSalarioInput" type="number" min="0" step="100" placeholder="0,00" onkeydown="if(event.key==='Enter')salvarSalarioModal()"></div>
+  <div class="modal-footer"><button class="btn-ghost" onclick="closeModal('modalSalario')">Cancelar</button><button class="btn" onclick="salvarSalarioModal()">Salvar</button></div>
+</div></div>
+
 <!-- Modal Diário -->
 <div class="modal-overlay" id="modalDiario">
   <div class="modal" style="max-width:520px">
@@ -1588,7 +1620,7 @@ console.log('Firebase Auth + Firestore conectados ✅');
 
 // STATE
 const DEFAULT_STATE = {
-  salario:0, academia:109, lancamentos:[], bancos:[], _editBancoId:null,
+  salario:0, academia:109, despesas:[], lancamentos:[], bancos:[], _editBancoId:null,
   dividas:[], exercicios:{0:[],1:[],2:[],3:[],4:[],5:[],6:[]}, exercFeitos:{},
   reunioes:[], lembretes:[], rotina:{manha:[],tarde:[],noite:[]}, rotinaFeito:{}, treinoDia:0,
   diario:[], notas:[], _notaCatFiltro:'todas',
@@ -1899,6 +1931,38 @@ window.confirmarAtualizarSaldo = function() {
   if(diff>0) showToast({icon:'💰',label:'Saldo atualizado',title:b.nome,sub:b.tipo,amount:diff});
 };
 window.deleteBanco = function(id){S.bancos=S.bancos.filter(x=>x.id!==id);save();renderBancos();};
+// ══ DESPESAS MENSAIS ══
+const mesAtual=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
+window.addDespesa=function(){
+  const nome=document.getElementById('despNome').value.trim();
+  const valor=parseFloat(document.getElementById('despValor').value);
+  const cat=document.getElementById('despCat').value;
+  const dia=parseInt(document.getElementById('despDia').value)||0;
+  if(!nome||!valor||valor<=0) return alert('Informe nome e valor!');
+  S.despesas.push({id:Date.now(),nome,valor,cat,dia,pagaMes:''});
+  save(); renderAll(); closeModal('modalDespesa');
+  ['despNome','despValor','despDia'].forEach(id=>document.getElementById(id).value='');
+};
+window.togglePagaDespesa=function(id){const d=S.despesas.find(x=>x.id===id);if(!d)return;d.pagaMes=d.pagaMes===mesAtual()?'':mesAtual();save();renderAll();};
+window.deleteDespesa=function(id){if(!confirm('Remover esta despesa?'))return;S.despesas=S.despesas.filter(x=>x.id!==id);save();renderAll();};
+window.openSalarioModal=function(){document.getElementById('modalSalarioInput').value=S.salario||'';openModal('modalSalario');};
+window.salvarSalarioModal=function(){
+  const v=parseFloat(document.getElementById('modalSalarioInput').value);
+  if(!v||v<=0) return alert('Informe um valor válido.');
+  S.salario=v; save(); closeModal('modalSalario'); renderAll();
+  showToast({icon:'💰',label:'Renda atualizada',title:fmt(v)+' / mês'});
+};
+function renderDespesas(){
+  const l=document.getElementById('listaDespesas'); if(!l) return;
+  const desp=S.despesas||[], total=desp.reduce((a,b)=>a+b.valor,0), mk=mesAtual();
+  const sobra=(S.salario||0)-(S.academia||0)-total;
+  document.getElementById('despRenda').textContent=S.salario?fmt(S.salario):'Definir';
+  document.getElementById('despTotal').textContent=fmt(total);
+  document.getElementById('despQtd').textContent=desp.length+' cadastrada(s) · '+desp.filter(d=>d.pagaMes===mk).length+' paga(s) no mês';
+  const sb=document.getElementById('despSobra'); sb.textContent=fmt(sobra); sb.style.color=sobra>=0?'var(--green)':'var(--red)';
+  l.innerHTML=!desp.length?'<div class="empty"><div class="icon">🧾</div>Nenhuma despesa cadastrada</div>':[...desp].sort((a,b)=>(a.dia||99)-(b.dia||99)).map(d=>{const paga=d.pagaMes===mk;return `<div class="check-item ${paga?'done':''}"><input type="checkbox" ${paga?'checked':''} onchange="togglePagaDespesa(${d.id})"><label>${esc(d.nome)} <span style="color:var(--muted);font-size:.72rem">· ${esc(d.cat)}${d.dia?' · vence dia '+d.dia:''}</span></label><span class="amount neg">${fmt(d.valor)}</span><button class="del-btn" onclick="deleteDespesa(${d.id})">✕</button></div>`;}).join('');
+}
+
 // ══ SALÁRIO — ONBOARDING E CONFIG ══
 
 // Mostra onboarding se usuário não tem salário definido ainda
@@ -2067,7 +2131,7 @@ function renderNotas(){
     </div>`).join('');
 }
 
-function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();renderConfigSalario();}
+function renderAll(){renderDashboard();renderFinancas();renderDividas();renderTreino();renderReunioes();renderLembretes();renderRotina();renderBancos();renderDiario();renderNotas();renderConfigSalario();renderDespesas();}
 window.renderAll=renderAll; window.renderTreino=renderTreino;
 
 function renderDashboard() {
@@ -2094,11 +2158,11 @@ function renderDashboard() {
   const saidas=lancamentos.filter(l=>l.tipo==='saida').reduce((a,b)=>a+b.valor,0);
   const entradas=lancamentos.filter(l=>l.tipo==='entrada').reduce((a,b)=>a+b.valor,0);
   const totalDividas=dividas.filter(d=>!d.quitada).reduce((a,b)=>a+(b.parcela||0),0);
-  const disponivel=salario-academia, emerg=Math.round(disponivel*.10), reserva=Math.round(disponivel*.10);
-  const pagDivida=Math.min(totalDividas,Math.round(disponivel*.30)), livre=disponivel-emerg-reserva-pagDivida;
+  const totalDesp=(S.despesas||[]).reduce((a,b)=>a+b.valor,0); const disponivel=salario-academia-totalDesp, emerg=Math.round(Math.max(0,disponivel)*.10), reserva=Math.round(Math.max(0,disponivel)*.10);
+  const pagDivida=Math.min(totalDividas,Math.round(Math.max(0,disponivel)*.30)), livre=disponivel-emerg-reserva-pagDivida;
   document.getElementById('statCards').innerHTML=`
-    <div class="stat" style="--c:#43d98c"><div class="stat-label">Salário Bruto</div><div class="stat-value">${fmt(salario)}</div><div class="stat-sub">mensal</div></div>
-    <div class="stat" style="--c:#ffd166"><div class="stat-label">Disponível</div><div class="stat-value">${fmt(disponivel)}</div><div class="stat-sub">após academia</div></div>
+    <div class="stat" style="--c:#43d98c;cursor:pointer" onclick="openSalarioModal()"><div class="stat-label">Salário Bruto</div><div class="stat-value">${fmt(salario)}</div><div class="stat-sub">mensal · toque para editar ✏️</div></div>
+    <div class="stat" style="--c:#ffd166"><div class="stat-label">Disponível</div><div class="stat-value">${fmt(disponivel)}</div><div class="stat-sub">após academia e despesas</div></div>
     <div class="stat" style="--c:#ff6b6b"><div class="stat-label">Dívidas/mês</div><div class="stat-value">${fmt(totalDividas)}</div></div>
     <div class="stat" style="--c:#6c63ff"><div class="stat-label">Uso Fruto</div><div class="stat-value">${fmt(Math.max(0,livre))}</div></div>`;
   if(totalDividas>disponivel*.5) alertEl.innerHTML=`<div class="alert">⚠️ Suas dívidas comprometem mais de 50% da renda!</div>`;
